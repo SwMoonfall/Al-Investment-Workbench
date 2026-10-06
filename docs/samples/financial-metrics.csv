@@ -1,0 +1,9 @@
+Period,PeriodType,MetricType,Value,Currency,IsEstimated,Notes
+2024,Annual,Revenue,1000000,CNY,false,虚构示例：导入前选择证券
+2025,Annual,Revenue,1200000,CNY,false,虚构示例
+2025,Annual,GrossProfit,480000,CNY,false,虚构示例
+2025,Annual,OperatingIncome,180000,CNY,false,虚构示例
+2025,Annual,OperatingCashFlow,160000,CNY,false,虚构示例
+2025,Annual,Capex,60000,CNY,false,正数现金支出
+2025,Annual,NetIncome,130000,CNY,false,虚构示例
+2026-Q1,Quarterly,Revenue,310000,CNY,true,虚构估算：趋势和规则不采用

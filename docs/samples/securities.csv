@@ -1,0 +1,3 @@
+Ticker,CompanyName,Market,Exchange,Currency,SecurityType,Sector,Industry,Country,ISIN,Notes
+SAMPLE1,示例公司,ChinaA,XSHG,CNY,Stock,示例板块,示例行业,中国,,仅用于导入演示
+SAMPLEETF,示例ETF,ChinaA,XSHG,CNY,Etf,指数基金,基金,中国,,虚构证券

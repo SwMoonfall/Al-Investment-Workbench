@@ -1,0 +1,42 @@
+<UserControl x:Class="AIInvestmentWorkbench.App.Views.RiskView" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+ <DockPanel>
+  <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,12"><TextBlock Text="研究证券" VerticalAlignment="Center" Margin="0,0,10,0"/><ComboBox Width="260" ItemsSource="{Binding Securities}" SelectedItem="{Binding SelectedSecurity}" DisplayMemberPath="Symbol"/><Button Content="刷新风险" Command="{Binding ReloadCommand}" Margin="8,0"/><Button Content="预警阈值" Command="{Binding ThresholdCommand}"/></WrapPanel>
+  <TabControl>
+   <TabItem Header="风险总览"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="16">
+    <Border Style="{StaticResource Card}" Padding="16"><TextBlock Text="{Binding Summary}" LineHeight="26" TextWrapping="Wrap"/></Border>
+    <TextBlock Text="行业 / 市场 / 币种 / 主题 / 自定义暴露" Style="{StaticResource SectionTitle}"/>
+    <TextBlock Text="分母为含现金的总资产；各标签计入完整持仓权重，重叠暴露不可相加。币种包含账户现金；手工币种标签代表用户定义的风险代理，不执行汇率换算或 ETF 穿透。" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,8,0,12"/>
+    <DataGrid ItemsSource="{Binding Snapshot.Exposure.Exposures}" Height="260"><DataGrid.Columns><DataGridTextColumn Header="分类" Binding="{Binding Category}" Width="150"/><DataGridTextColumn Header="标签 / 资料字段" Binding="{Binding Name}" Width="*"/><DataGridTextColumn Header="总资产暴露" Binding="{Binding Weight,StringFormat=P2}" Width="150"/><DataGridTextColumn Header="证券数（不含现金）" Binding="{Binding SecurityCount}" Width="180"/></DataGrid.Columns></DataGrid>
+    <TextBlock Text="Position Concentration · 持仓集中度" Style="{StaticResource SectionTitle}" Margin="0,20,0,10"/>
+    <DataGrid ItemsSource="{Binding Holdings}" Height="240"><DataGrid.Columns><DataGridTextColumn Header="证券" Binding="{Binding Position.Security}" Width="190"/><DataGridTextColumn Header="仓位" Binding="{Binding Position.Weight,StringFormat=P2}" Width="90"/><DataGridTextColumn Header="上限" Binding="{Binding Position.MaxWeight,StringFormat=P2}" Width="90"/><DataGridTextColumn Header="仓位警示" Binding="{Binding LimitStatus}" Width="140"/><DataGridTextColumn Header="价格日期 / 口径" Binding="{Binding PriceNotice}" Width="130"/><DataGridTextColumn Header="风险标签" Binding="{Binding Tags}" Width="300"/></DataGrid.Columns></DataGrid>
+    <TextBlock Text="需核实的逻辑与会计风险" Style="{StaticResource SectionTitle}" Margin="0,20,0,10"/>
+    <TextBlock Text="仅汇总当前账户持仓；含未归档的 Draft / Active / Warning 逻辑。历史已结束逻辑不累计。会计检查按报告币种与 Annual / Quarterly / TTM 分组，空列表不代表安全。" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+    <DataGrid ItemsSource="{Binding Alerts}" Height="260"><DataGrid.Columns><DataGridTextColumn Header="证券" Binding="{Binding Security}" Width="110"/><DataGridTextColumn Header="信号" Binding="{Binding Kind}" Width="160"/><DataGridTextColumn Header="依据" Binding="{Binding Detail}" Width="700"/></DataGrid.Columns></DataGrid>
+   </StackPanel></ScrollViewer></TabItem>
+   <TabItem Header="证券风险标签"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="16">
+    <TextBlock Text="为上方所选证券设置多个标签" Style="{StaticResource SectionTitle}"/>
+    <TextBlock Text="Sector、Market、Currency 为分类。未设置某分类标签时自动使用证券资料字段；设置后以该分类标签替代。Theme 与 Custom 按需叠加。移除的是关联，不删除标签或历史记录。" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,10,0,16"/>
+    <WrapPanel><ComboBox Width="300" ItemsSource="{Binding Tags}" SelectedItem="{Binding SelectedTag}" DisplayMemberPath="Label"/><Button Content="添加关联" Command="{Binding AssignTagCommand}" Margin="8,0"/><Button Content="创建自定义标签" Command="{Binding CreateTagCommand}"/></WrapPanel>
+    <DataGrid ItemsSource="{Binding AssignedTags}" SelectedItem="{Binding SelectedAssignedTag}" Height="300" Margin="0,16,0,12" SelectionMode="Single"><DataGrid.Columns><DataGridTextColumn Header="分类" Binding="{Binding Category}" Width="180"/><DataGridTextColumn Header="已关联标签" Binding="{Binding Name}" Width="*"/></DataGrid.Columns></DataGrid>
+    <Button Content="移除选中关联" Command="{Binding RemoveTagCommand}" HorizontalAlignment="Left"/>
+   </StackPanel></ScrollViewer></TabItem>
+   <TabItem Header="仓位规划与清单"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="16">
+    <TextBlock Text="目标总仓位 = BasePosition × ConfidenceFactor × ValuationFactor × RiskFactor" FontWeight="SemiBold" TextWrapping="Wrap"/>
+    <TextBlock Text="比例使用小数，例如 0.05 = 5%。结果是目标总仓位，不是额外买入量；不会自动创建交易。" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,8,0,14"/>
+    <UniformGrid Columns="4"><StackPanel Margin="0,0,12,0"><TextBlock Text="BasePosition"/><TextBox Text="{Binding BasePosition,UpdateSourceTrigger=PropertyChanged}"/></StackPanel><StackPanel Margin="0,0,12,0"><TextBlock Text="ConfidenceFactor"/><TextBox Text="{Binding ConfidenceFactor,UpdateSourceTrigger=PropertyChanged}"/></StackPanel><StackPanel Margin="0,0,12,0"><TextBlock Text="ValuationFactor"/><TextBox Text="{Binding ValuationFactor,UpdateSourceTrigger=PropertyChanged}"/></StackPanel><StackPanel><TextBlock Text="RiskFactor"/><TextBox Text="{Binding RiskFactor,UpdateSourceTrigger=PropertyChanged}"/></StackPanel></UniformGrid>
+    <Button Content="计算目标仓位" Command="{Binding CalculateCommand}" IsEnabled="{Binding CanDecide}" HorizontalAlignment="Left" Margin="0,12,0,12"/>
+    <Border Style="{StaticResource Card}" Padding="16"><StackPanel><TextBlock Text="{Binding SizingText}" TextWrapping="Wrap" LineHeight="25"/></StackPanel></Border>
+    <WrapPanel IsEnabled="{Binding CanDecide}"><Button Content="加仓前检查 · Add / NoAction" Command="{Binding AddDecisionCommand}" Margin="0,0,10,8"/><Button Content="减仓 / 退出检查" Command="{Binding ExitDecisionCommand}" Margin="0,0,0,8"/></WrapPanel>
+    <TextBlock Text="计算后打开加仓清单，会一并保存本次规划参数。清单保存后可在决策历史查看；取消不保存。" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,8,0,12"/>
+    <TextBlock Text="{Binding ContextText}" TextWrapping="Wrap" LineHeight="24"/>
+   </StackPanel></ScrollViewer></TabItem>
+   <TabItem Header="决策历史"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="16">
+    <TextBlock Text="所有 Add / NoAction / Hold / Trim / Exit 均保留；只追加，不覆盖。历史快照不随当前持仓变化。" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,12"/>
+    <Button Content="从选中决策生成 Journal 草稿" Command="{Binding JournalCommand}" HorizontalAlignment="Left" Margin="0,0,0,12"/><DataGrid ItemsSource="{Binding Records}" SelectedItem="{Binding SelectedRecord}" Height="220" SelectionMode="Single"><DataGrid.Columns><DataGridTextColumn Header="记录时间 UTC" Binding="{Binding CreatedAt,StringFormat=yyyy-MM-dd HH:mm}" Width="180"/><DataGridTextColumn Header="证券" Binding="{Binding Security}" Width="200"/><DataGridTextColumn Header="选择" Binding="{Binding Choice}" Width="100"/><DataGridTextColumn Header="理由" Binding="{Binding Reason}" Width="450"/></DataGrid.Columns></DataGrid>
+    <TextBox Text="{Binding RecordText,Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" Height="480" Margin="0,12,0,0"/>
+   </StackPanel></ScrollViewer></TabItem>
+  </TabControl>
+ </DockPanel>
+</UserControl>
+
+

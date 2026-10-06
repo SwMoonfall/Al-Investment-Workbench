@@ -1,0 +1,14 @@
+**/bin/
+**/obj/
+.vs/
+TestResults/
+work/
+outputs/
+*.db
+*.db-shm
+*.db-wal
+*.log
+
+Secrets/
+*.dpapi
+*.dpapi.tmp
