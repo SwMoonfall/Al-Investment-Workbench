@@ -38,7 +38,7 @@ public partial class App : System.Windows.Application
         try
         {
             var startupWatch = System.Diagnostics.Stopwatch.StartNew();
-            _smoke = e.Args.Contains("--smoke-test") || e.Args.Contains("--performance-test");
+            _smoke = e.Args.Contains("--smoke-test") || e.Args.Contains("--performance-test") || e.Args.Contains("--ai-services-test");
             var dataIndex = Array.IndexOf(e.Args, "--data-root");
             var dataRoot = dataIndex >= 0 && dataIndex + 1 < e.Args.Length ? e.Args[dataIndex + 1] : null;
             if (_smoke && dataRoot is null) throw new ArgumentException("Smoke test requires an isolated --data-root.");
@@ -103,13 +103,21 @@ public partial class App : System.Windows.Application
             builder.Services.AddSingleton<JournalReviewStore>();
             builder.Services.AddSingleton<IJournalReviewReader>(sp => sp.GetRequiredService<JournalReviewStore>());
             builder.Services.AddSingleton<IJournalReviewCommands>(sp => sp.GetRequiredService<JournalReviewStore>());
-            builder.Services.AddSingleton<IAIStore, AIStore>();
+            builder.Services.AddSingleton<AIStore>();
+            builder.Services.AddSingleton<IAIStore>(sp => sp.GetRequiredService<AIStore>());
+            builder.Services.AddSingleton<IProviderCatalogStore>(sp => sp.GetRequiredService<AIStore>());
+            builder.Services.AddSingleton<ProviderCatalogService>();
+            builder.Services.AddSingleton<NativeAIProvider>();
+            builder.Services.AddSingleton<IModelDiscovery>(sp => sp.GetRequiredService<NativeAIProvider>());
+            if (e.Args.Contains("--ai-services-test")) builder.Services.AddSingleton<IModelDiscovery, Diagnostics.AIServicesDiscovery>();
             builder.Services.AddSingleton<ISecretStore, WindowsSecretStore>();
             if (_smoke) builder.Services.AddSingleton<IAIProvider, Diagnostics.SmokeAIProvider>();
-            else builder.Services.AddSingleton<IAIProvider, OpenAIProvider>();
+            else builder.Services.AddSingleton<IAIProvider>(sp => sp.GetRequiredService<NativeAIProvider>());
+            if (e.Args.Contains("--ai-services-test")) builder.Services.AddSingleton<IAIProvider, Diagnostics.AIServicesTestProvider>();
             builder.Services.AddSingleton<IAIContextBuilder, AIContextBuilder>();
             builder.Services.AddSingleton<AIAnalysisService>();
             builder.Services.AddSingleton<AISettingsViewModel>();
+            builder.Services.AddSingleton<PageViewModel>(sp => sp.GetRequiredService<AISettingsViewModel>());
             builder.Services.AddSingleton<PageViewModel, AIResearchViewModel>();
             builder.Services.AddSingleton<IErrorHandler, ErrorHandler>();
             builder.Services.AddSingleton<ThemeService>();
@@ -148,7 +156,8 @@ public partial class App : System.Windows.Application
             }
             if (_smoke)
             {
-                if (e.Args.Contains("--performance-test")) await Diagnostics.PerformanceScenario.RunAsync(_host.Services, MainWindow, paths);
+                if (e.Args.Contains("--ai-services-test")) await Diagnostics.AIServicesScenario.RunAsync(_host.Services, MainWindow, paths);
+                else if (e.Args.Contains("--performance-test")) await Diagnostics.PerformanceScenario.RunAsync(_host.Services, MainWindow, paths);
                 else await Diagnostics.SmokeTest.RunAsync(_host.Services, MainWindow, paths);
                 Shutdown(0);
             }
@@ -190,11 +199,3 @@ public partial class App : System.Windows.Application
         base.OnExit(e);
     }
 }
-
-
-
-
-
-
-
-

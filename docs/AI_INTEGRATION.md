@@ -4,10 +4,10 @@ AI 只生成研究建议。PortfolioLedger、ValuationEngine、ThesisRules 和�
 
 ## 使用
 
-1. Settings → AI 服务：选择 OpenAI，输入自己账户可用的模型名称。模型必须支持 Responses API 和严格 JSON Schema；不内置或默认指定模型。
-2. Base URL 留空使用 `https://api.openai.com/v1/`。自定义地址必须使用 HTTPS，并兼容 Responses 与结构化输出。配置地址即指定资料接收方；不是所有兼容 Chat Completions 的代理都支持 Responses。
-3. “设置 / 替换密钥”使用 PasswordBox，密钥不会回显。密钥按完整 API 根地址隔离；修改地址后需要独立配置密钥。
-4. 保存设置。可点击“保存并测试连接”，仅发送简单连通性请求，可能产生 API 费用。测试不发送研究资料。
+1. 打开独立的“AI服务”页面，新增提供商并选择 OpenAI、GoogleGenAI、Anthropic 或 OpenAICompatible。按类型填写连接字段。
+2. “保存配置”仅本地保存；“保存并获取模型”保存后获取远端模型。也可自定义模型 ID。
+3. 密钥通过 PasswordBox 输入，以 Source ID、类型和地址隔离并使用 Windows DPAPI 加密。留空保留原密钥，地址变化后需要重新配置。
+4. 添加 / 启用模型后设为当前模型；“调用测试”发送最小请求，可能产生费用。详情见 [AI服务管理](AI_SERVICES.md)。
 5. AI 研究助理 → 选择证券和模板 → 可预览上下文、补充最多 6000 字符 → 开始单项分析。Portfolio Risk Review 使用当前账户，Journal Review 使用当前账户指定日期范围内的真实日志及关联逻辑；专用入口见“日志与复盘”。
 6. “完整公司研究 · 10 步”顺序执行 Business Model、Growth Drivers、Financial Quality、Competitive Position、Accounting Risk、Bull / Base / Bear Case、Thesis Challenge、Monitoring KPI。每步独立审计并保存，取消按钮立即取消当前等待；失败时停止后续步骤，报告保留成功章节并标注不完整。
 7. “结果与审计”查看分类结果、原始输出、来源、精确上下文、提示词、模型、地址和响应 ID。“研究报告”查看自动保存的统一报告，可导出 Markdown。刷新载入当前对象的历史；全局任务的分析历史与证券分析分开。
@@ -18,7 +18,7 @@ AI 只生成研究建议。PortfolioLedger、ValuationEngine、ThesisRules 和�
 
 `Application/AI` 定义 IAIProvider、ISecretStore、IAIContextBuilder、IAIStore 及工作流；不引用具体 SDK 类型。`AI/OpenAIProvider` 使用官方 NuGet `OpenAI 2.14.0` 的 `OpenAI.Responses.ResponsesClient`、`CreateResponseOptions`、`CreateResponseAsync`，已通过安装包 README/XML、反射和模拟 HTTP 核对签名。Responses 类型在此版本带 OPENAI001，警告仅在适配器局部禁用。SDK 版本固定，不在业务层蔓延。
 
-每次请求设置 `store=false`、用户配置的模型/输出上限、严格 JSON Schema；关闭 SDK 日志、消息内容日志与 tracing；禁用自动重试和 HTTP 重定向。`store=false` 是响应存储选项，不等于承诺服务商零留存。遵循所选服务方政策。
+OpenAI Responses 请求设置 `store=false`、用户配置的模型/输出上限、严格 JSON Schema；关闭 SDK 日志、消息内容日志与 tracing；禁用自动重试和 HTTP 重定向。`store=false` 是响应存储选项，不等于承诺服务商零留存。遵循所选服务方政策。
 
 应用和 Provider 双层 CancellationToken / Timeout（1–600 秒），工作流还用 WaitAsync 防止不遵守取消的替代 Provider 阻塞 UI。实际官方适配器向 HTTP 传递取消。无自动重复收费请求；用户可明确重试。取消不能保证服务端停止计费。
 
@@ -36,7 +36,7 @@ Thesis Challenge 的固定提示要求假设逻辑可能错误，以做空者、
 
 Sources、财务输入、用户笔记均为不可信资料，不执行其中指令。当前来源等级仍由用户核实。结构化文本在只读 TextBox 展示，不执行 HTML、脚本或自动打开链接。
 
-`AI.Settings` 仅存非敏感配置。`WindowsSecretStore` 使用 `ProtectedData` / `DataProtectionScope.CurrentUser`（包 10.0.9），路径为数据根目录 `Secrets/<endpoint SHA256>.dpapi`。明文只短暂存在当前进程内存，未存 SQLite、配置文件或日志。加密文件无法保证跨 Windows 用户/机器可用；数据库备份不包含密钥，迁移机器后重新输入。忽略 Secrets、*.dpapi 与临时加密文件的 Git 跟踪。
+旧 `AI.Settings` 会迁移至 Provider Source / Model 目录，仅存非敏感配置。`WindowsSecretStore` 使用 `ProtectedData` / `DataProtectionScope.CurrentUser`（包 10.0.9），路径为数据根目录 `Secrets/<scope SHA256>.dpapi`。明文只短暂存在当前进程内存，未存 SQLite、配置文件或日志。加密文件无法保证跨 Windows 用户/机器可用；数据库备份不包含密钥，迁移机器后重新输入。忽略 Secrets、*.dpapi 与临时加密文件的 Git 跟踪。
 
 ## 保存与故障恢复
 
@@ -48,9 +48,8 @@ Sources、财务输入、用户笔记均为不可信资料，不执行其中指�
 
 测试全部离线：FakeAIProvider 覆盖组装、解析、来源、错误、取消、忽略取消时的超时、部分报告、完整流程、保存与重开；自定义 HttpMessageHandler 验证官方 SDK 实际 Responses 请求、strict schema、模型配置、store=false、认证/配额/429、无自动重试。真实 Windows DPAPI 加密回读也被测试。
 
-显式 `--smoke-test --data-root <隔离目录>` 才注册离线 SmokeAIProvider；正常运行始终使用官方适配器，默认 Provider 为 Disabled。测试数据中的 offline-test-model 不是生产默认模型。
+显式 `--smoke-test --data-root <隔离目录>` 才注册离线 SmokeAIProvider；正常运行按当前 Source 类型分发至原生或兼容适配器，默认 Provider 为 Disabled。测试数据中的 offline-test-model 不是生产默认模型。
 
-未使用真实 API Key 或真实网络推理，账户模型权限、实际收费、网络代理与自定义服务兼容性需用户配置后用连接测试核对。未实现 streaming、自动重试、跨提供商切换、分词预算估计或检索增强索引。Phase 7 已提供独立 Journal 与保存复盘的只读上下文，条目数量、价格口径与历史缺口见 JOURNAL_AND_REVIEW.md。没有 AI 自动评分或业务数据自动写回。
+未使用真实 API Key 或真实网络推理，账户模型权限、实际收费、网络代理与自定义服务兼容性需用户配置后用连接测试核对。未实现 streaming、自动重试、分词预算估计或检索增强索引。Phase 7 已提供独立 Journal 与保存复盘的只读上下文，条目数量、价格口径与历史缺口见 JOURNAL_AND_REVIEW.md。没有 AI 自动评分或业务数据自动写回。
 
 官方参考：[SDK 与语言库](https://developers.openai.com/api/docs/libraries)、[Responses 迁移指南](https://developers.openai.com/api/docs/guides/migrate-to-responses)、[Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs)。核对日期：2026-10-04。
-

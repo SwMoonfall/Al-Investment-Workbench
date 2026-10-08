@@ -6,7 +6,7 @@ using AIInvestmentWorkbench.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 namespace AIInvestmentWorkbench.Infrastructure.Services;
 
-public sealed class AIStore(IDbContextFactory<InvestmentDbContext> factory, DatabaseWriter writer) : IAIStore
+public sealed class AIStore(IDbContextFactory<InvestmentDbContext> factory, DatabaseWriter writer) : IAIStore, IProviderCatalogStore
 {
     public Task InitializeAsync(CancellationToken ct = default) => writer.ExecuteAsync(async db =>
     {
@@ -17,7 +17,31 @@ public sealed class AIStore(IDbContextFactory<InvestmentDbContext> factory, Data
         return true;
     }, ct);
     public async Task<AISettings> ReadSettingsAsync(CancellationToken ct = default)
-    { await using var db = await factory.CreateDbContextAsync(ct); var json = await db.AppSettings.Where(x => x.Key == "AI.Settings").Select(x => x.Value).SingleOrDefaultAsync(ct); return json is null ? new() : JsonSerializer.Deserialize<AISettings>(json) ?? new(); }
+    { if (await ReadCatalogAsync(ct) is { } catalog) return catalog.ActiveSettings; await using var db = await factory.CreateDbContextAsync(ct); var json = await db.AppSettings.Where(x => x.Key == "AI.Settings").Select(x => x.Value).SingleOrDefaultAsync(ct); return json is null ? new() : JsonSerializer.Deserialize<AISettings>(json) ?? new(); }
+    public async Task<ProviderCatalog?> ReadCatalogAsync(CancellationToken ct = default)
+    {
+        await using var db = await factory.CreateDbContextAsync(ct);
+        var rows = await db.AppSettings.AsNoTracking().Where(x => x.Key == "AI.ProviderCatalog" || x.Key.StartsWith("AI.ProviderSource.") || x.Key.StartsWith("AI.ProviderModel.")).ToListAsync(ct);
+        var header = rows.SingleOrDefault(x => x.Key == "AI.ProviderCatalog");
+        if (header is null) return null;
+        var catalog = new ProviderCatalog(rows.Where(x => x.Key.StartsWith("AI.ProviderSource.", StringComparison.Ordinal)).Select(x => JsonSerializer.Deserialize<ProviderSource>(x.Value)!).ToArray(),
+            rows.Where(x => x.Key.StartsWith("AI.ProviderModel.", StringComparison.Ordinal)).Select(x => JsonSerializer.Deserialize<ProviderModel>(x.Value)!).ToArray(), JsonSerializer.Deserialize<Guid?>(header.Value));
+        catalog.Validate(); return catalog;
+    }
+    public Task SaveCatalogAsync(ProviderCatalog catalog, CancellationToken ct = default) => writer.ExecuteAsync(async db =>
+    {
+        catalog.Validate();
+        // One row per entity respects the existing 4,000-character preference limit.
+        // The writer commits header, sources and models in the same transaction.
+        var values = new Dictionary<string, string> { ["AI.ProviderCatalog"] = JsonSerializer.Serialize(catalog.ActiveModelId) };
+        foreach (var source in catalog.Sources) values[$"AI.ProviderSource.{source.Id:N}"] = JsonSerializer.Serialize(source);
+        foreach (var model in catalog.Models) values[$"AI.ProviderModel.{model.Id:N}"] = JsonSerializer.Serialize(model);
+        var existing = await db.AppSettings.Where(x => x.Key == "AI.ProviderCatalog" || x.Key.StartsWith("AI.ProviderSource.") || x.Key.StartsWith("AI.ProviderModel.")).ToListAsync(ct);
+        foreach (var item in existing)
+        { if (values.Remove(item.Key, out var value)) item.SetValue(value); else db.AppSettings.Remove(item); }
+        foreach (var pair in values) db.AppSettings.Add(new(pair.Key, pair.Value));
+        return true;
+    }, ct);
     public Task SaveSettingsAsync(AISettings settings, CancellationToken ct = default) => writer.ExecuteAsync(async db =>
     {
         settings.Validate(); var item = await db.AppSettings.SingleOrDefaultAsync(x => x.Key == "AI.Settings", ct); var json = JsonSerializer.Serialize(settings);

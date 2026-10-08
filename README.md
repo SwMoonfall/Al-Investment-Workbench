@@ -2,6 +2,10 @@
 
 面向个人证券投资者的 Windows 本地投资研究工作台。核心目的不是自动荐股；AI 是研究助理，最终投资决策由用户完成。第一版不提供券商自动交易。
 
+## AI服务管理更新（2026-10-07）
+
+新增独立“AI服务”页面，支持多个提供商 Source、远端模型发现、本地模型启用与测试。原生支持 OpenAI、Google GenAI、Anthropic，并提供 OpenAI 兼容层。原单一配置自动迁移。详见 [AI服务管理](docs/AI_SERVICES.md)。
+
 ## 当前阶段：Phase 8 / Production Hardening & Installer
 
 在原有 Solution 上增加风险标签、重叠暴露、集中度、风险总览、仓位规划、加仓/退出清单和持久化决策历史，详见 [风险与决策指南](docs/PORTFOLIO_RISK_DECISIONS.md)。保留 PE、EV/EBITDA、EV/FCF、简化 DCF、反向 CAGR / 稳定利润率估值及 Bear/Base/Bull 比较。估值完全由确定性代码驱动，详见 [估值说明](docs/VALUATION_ENGINE.md)。已完成投资逻辑、假设、用户专属 Kill 条件、完整版本历史和复盘提醒；保留 Portfolio 核算以及十章节公司研究、财务指标与趋势、资料来源、TXT/Markdown/CSV/PDF 文本导入、可配置研究评分、会计关注规则和全局搜索。数据保存在本机 SQLite，重启后恢复。新增可选 AI 研究增强层：官方 OpenAI Responses、加密密钥、任务上下文、提示词管理、结构化结果与审计、Thesis Challenge 及十步公司研究。默认关闭，需要用户配置模型和密钥；无实时行情 API。详见 [AI 使用与设计说明](docs/AI_INTEGRATION.md)。
@@ -34,7 +38,7 @@ src/AIInvestmentWorkbench.App            WPF、编辑窗口、导航、主题、
 src/AIInvestmentWorkbench.Domain         实体、校验、加权平均成本交易账本
 src/AIInvestmentWorkbench.Application    用例服务、仓储接口、DTO、CSV 解析与映射
 src/AIInvestmentWorkbench.Infrastructure SQLite 仓储、原子写入、迁移、日志与备份
-src/AIInvestmentWorkbench.AI             官方 OpenAI Responses SDK 适配器
+src/AIInvestmentWorkbench.AI             OpenAI Responses、Google GenAI、Anthropic 与兼容适配器
  tests/                                 Domain.Tests / Application.Tests
  docs/                                  架构、规格、模型、路线图、CSV 说明与示例
  scripts/                               本机 SDK 环境与 WPF 自动验收
@@ -127,8 +131,3 @@ Phase 3 新增可验证、可证伪的 Thesis：观点、市场分歧、三情�
 ## 风险与决策快速开始
 
 从 Portfolio 选中持仓后点击“风险 / 决策”，或直接进入风险页。按当前账户查看行业、市场、币种、主题与自定义风险暴露；为所选证券关联标签，输入四个参数计算目标仓位，再完成加仓或退出清单。所有最终选择和理由写入决策历史，不执行交易。相关性问题由用户判断，未实现统计相关矩阵或 VaR。详见 [风险与决策指南](docs/PORTFOLIO_RISK_DECISIONS.md)。
-
-
-
-
-

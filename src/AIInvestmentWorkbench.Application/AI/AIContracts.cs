@@ -2,18 +2,22 @@ using AIInvestmentWorkbench.Domain.Entities;
 using AIInvestmentWorkbench.Domain.Rules;
 namespace AIInvestmentWorkbench.Application.AI;
 
-public sealed record AISettings(string Provider = "Disabled", string Model = "", int TimeoutSeconds = 90, int MaxOutputTokens = 4096, string BaseUrl = "")
+public sealed record AISettings(string Provider = "Disabled", string Model = "", int TimeoutSeconds = 90, int MaxOutputTokens = 4096, string BaseUrl = "", Guid? SourceId = null, string ApiVersion = "2023-06-01", string Organization = "", string Project = "", string CompatibilityApi = "ChatCompletions")
 {
-    public Uri Endpoint => new(string.IsNullOrWhiteSpace(BaseUrl) ? "https://api.openai.com/v1/" : BaseUrl.TrimEnd('/') + "/");
-    public string SecretScope => Endpoint.AbsoluteUri;
+    public Uri Endpoint => new(string.IsNullOrWhiteSpace(BaseUrl) ? ProviderTypes.DefaultUrl(Provider) : BaseUrl.TrimEnd('/') + "/");
+    public string SecretScope => SourceId is { } id ? $"ai-source:{id:N}:{Provider}:{Endpoint.AbsoluteUri}" : Endpoint.AbsoluteUri;
     public void Validate(bool forRequest = false)
     {
-        if (Provider is not ("Disabled" or "OpenAI")) throw new BusinessException("请选择支持的 Provider。");
+        if (Provider != "Disabled" && !ProviderTypes.All.Contains(Provider)) throw new BusinessException("请选择支持的 Provider。");
         if (TimeoutSeconds is < 1 or > 600 || MaxOutputTokens is < 128 or > 65536) throw new BusinessException("Timeout 应为 1–600 秒，MaxOutputTokens 为 128–65536。");
         if (Model.Length > 150 || Model.Any(char.IsControl)) throw new BusinessException("模型名称无效。");
-        if (!Uri.TryCreate(string.IsNullOrWhiteSpace(BaseUrl) ? "https://api.openai.com/v1/" : BaseUrl, UriKind.Absolute, out var uri) || uri.Scheme != "https" || uri.UserInfo.Length > 0 || uri.Query.Length > 0 || uri.Fragment.Length > 0)
+        if (!Uri.TryCreate(string.IsNullOrWhiteSpace(BaseUrl) ? ProviderTypes.DefaultUrl(Provider) : BaseUrl, UriKind.Absolute, out var uri) || uri.Scheme != "https" || uri.UserInfo.Length > 0 || uri.Query.Length > 0 || uri.Fragment.Length > 0)
             throw new BusinessException("BaseUrl 必须是无用户名、密码、查询参数或片段的 HTTPS API 根地址。");
-        if (forRequest && (Provider == "Disabled" || string.IsNullOrWhiteSpace(Model))) throw new BusinessException("请先在 Settings 启用 OpenAI 并填写模型名称。");
+        if (Provider == "OpenAICompatible" && string.IsNullOrWhiteSpace(BaseUrl)) throw new BusinessException("兼容服务必须填写 Base URL。");
+        if (new[] { ApiVersion, Organization, Project }.Any(x => x.Length > 200 || x.Any(char.IsControl))) throw new BusinessException("请求配置字段无效。");
+        if (Provider == "Anthropic" && !DateOnly.TryParseExact(ApiVersion, "yyyy-MM-dd", out _)) throw new BusinessException("Anthropic API Version 应为 yyyy-MM-dd。");
+        if (CompatibilityApi is not ("ChatCompletions" or "Responses")) throw new BusinessException("请选择兼容 API 协议。");
+        if (forRequest && (Provider == "Disabled" || string.IsNullOrWhiteSpace(Model))) throw new BusinessException("请先在 AI服务页面添加模型并设为当前模型。");
     }
 }
 public interface ISecretStore

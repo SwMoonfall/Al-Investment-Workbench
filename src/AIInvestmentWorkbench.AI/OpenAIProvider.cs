@@ -23,7 +23,7 @@ public sealed class OpenAIProvider : IAIProvider, IDisposable
         {
             var key = await _secrets.ReadAsync(request.Settings.SecretScope, timeout.Token);
             if (string.IsNullOrWhiteSpace(key)) throw new AIProviderException(AIErrorKind.Configuration);
-            var options = new ResponsesClientOptions { Endpoint = request.Settings.Endpoint, NetworkTimeout = TimeSpan.FromSeconds(request.Settings.TimeoutSeconds), Transport = new HttpClientPipelineTransport(_http), RetryPolicy = new ClientRetryPolicy(0), EnableDistributedTracing = false,
+            var options = new ResponsesClientOptions { Endpoint = request.Settings.Endpoint, OrganizationId = string.IsNullOrWhiteSpace(request.Settings.Organization) ? null : request.Settings.Organization, ProjectId = string.IsNullOrWhiteSpace(request.Settings.Project) ? null : request.Settings.Project, NetworkTimeout = TimeSpan.FromSeconds(request.Settings.TimeoutSeconds), Transport = new HttpClientPipelineTransport(_http), RetryPolicy = new ClientRetryPolicy(0), EnableDistributedTracing = false,
                 ClientLoggingOptions = new ClientLoggingOptions { EnableLogging = false, EnableMessageContentLogging = false } };
             var client = new ResponsesClient(new ApiKeyCredential(key), options);
             var input = new CreateResponseOptions { Model = request.Settings.Model.Trim(), Instructions = request.Instructions, MaxOutputTokenCount = request.Settings.MaxOutputTokens, StoredOutputEnabled = false };

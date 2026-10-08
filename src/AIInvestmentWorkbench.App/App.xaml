@@ -13,6 +13,7 @@
    <DataTemplate DataType="{x:Type vm:DashboardViewModel}"><views:DashboardView /></DataTemplate>
    <DataTemplate DataType="{x:Type vm:PortfolioViewModel}"><views:PortfolioView /></DataTemplate>
    <DataTemplate DataType="{x:Type vm:WatchlistViewModel}"><views:WatchlistView /></DataTemplate>
+   <DataTemplate DataType="{x:Type vm:AISettingsViewModel}"><views:AISettingsView /></DataTemplate>
    <DataTemplate DataType="{x:Type vm:SettingsViewModel}"><views:SettingsView /></DataTemplate>
    <DataTemplate DataType="{x:Type vm:SecuritiesViewModel}"><views:SecuritiesView /></DataTemplate>
    <DataTemplate DataType="{x:Type vm:ImportViewModel}"><views:ImportView /></DataTemplate>
@@ -27,5 +28,3 @@
   </ResourceDictionary>
  </Application.Resources>
 </Application>
-
-

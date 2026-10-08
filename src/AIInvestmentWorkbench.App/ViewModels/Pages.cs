@@ -16,10 +16,10 @@ public abstract class PageViewModel(string key, string title, string subtitle) :
     private AppTheme _selectedTheme;
     private readonly ISettingsService _settings;
     private readonly ThemeService _theme;
-    public SettingsViewModel(ISettingsService settings, ThemeService theme, AppPaths paths, IErrorHandler errors, AISettingsViewModel ai, MaintenanceViewModel maintenance)
+    public SettingsViewModel(ISettingsService settings, ThemeService theme, AppPaths paths, IErrorHandler errors, MaintenanceViewModel maintenance)
         : base("Settings", "设置", "调整工作台外观，了解本地数据的保存位置。")
     {
-        _settings = settings; _theme = theme; AI = ai; Maintenance = maintenance;
+        _settings = settings; _theme = theme; Maintenance = maintenance;
         DatabasePath = paths.DatabasePath; LogsPath = paths.LogsDirectory;
         ChangeThemeCommand = new AsyncCommand(async parameter =>
         {
@@ -29,9 +29,9 @@ public abstract class PageViewModel(string key, string title, string subtitle) :
             Status = $"已保存{(next == AppTheme.Light ? "浅色" : "深色")}主题，下次启动自动恢复。";
         }, errors);
     }
-    public AISettingsViewModel AI { get; }
+
     public MaintenanceViewModel Maintenance { get; }
-    public override async Task LoadAsync() { await AI.LoadAsync(); await Maintenance.LoadAsync(); }
+    public override async Task LoadAsync() { await Maintenance.LoadAsync(); }
     public AppTheme SelectedTheme { get => _selectedTheme; private set => Set(ref _selectedTheme, value); }
     public string Status { get => _status; private set => Set(ref _status, value); }
     public string DatabasePath { get; }
@@ -43,7 +43,3 @@ public abstract class PageViewModel(string key, string title, string subtitle) :
         _theme.Apply(SelectedTheme);
     }
 }
-
-
-
-
